@@ -9,13 +9,13 @@
 % Units in 0.1 ms.
 % n_Cdc42: total number of Cdc42.
 % n_BemGEF: total number of Bem1-GEF.
-% mink: minimum Attached_actin dissociation rate.
+% maxk: maximum dissociation rate of Attached_actin cables.
 % random_seed: a number which initializes a random number generator.
 
 % Output:
 % The cfg files will be generated in the "directory" folder.
 
-function smoldyn_cfg(fileprefix,directory,tstop,mink,random_seed)
+function smoldyn_cfg(fileprefix,directory,tstop,maxk,random_seed)
 
 % configuration file for smoldyn
 cfg_name = [directory '/' fileprefix '.cfg']; 
@@ -77,7 +77,6 @@ fprintf(fid, 'mol_list Fused_vesicle list7\n');
 fprintf(fid, 'mol_list Vesicle list8\n');
 fprintf(fid, 'mol_list Attached_actin list9\n');
 fprintf(fid, 'mol_list Actin list10\n');
-fprintf(fid, 'mol_list A list11\n');
 fprintf(fid, 'start_surface inner_walls\n');
 fprintf(fid, 'action both all jump\n');
 fprintf(fid, 'polygon both edge\n');
@@ -89,9 +88,9 @@ fprintf(fid, 'jump r1 front <-> r2 front\n');
 fprintf(fid, 'jump r3 front <-> r4 front\n');
 fprintf(fid, 'end_surface\n');
 
-% Gaussian gradient of actin dissociation rate
 L = 8.8623;
-maxk = 1/60;
+maxk = maxk;
+mink = 1/60;
 sigma = 0.5;
 n_contour = 11;
 sample_y = linspace(mink,maxk,n_contour);
@@ -104,6 +103,7 @@ for i = 1:n_contour-1
     radius(i) = sample_x(find(f>=sample_y(i),1,'first'));
     k(i) = mean(f(idx));
 end
+k = flip(k);
 
 radius = flip(radius);
 for i = 1:n_contour-1
@@ -144,23 +144,9 @@ fprintf(fid,'point L/2 L/2-%g\n',radius(end)+0.5);
 fprintf(fid,'point L/2+%g L/2\n',radius(end)+0.5);
 fprintf(fid,'point L/2-%g L/2\n',radius(end)+0.5);
 fprintf(fid,'end_compartment\n');
-fprintf(fid,'reaction compartment=cmpt_%d Attached_actin_%g Attached_actin -> Actin %g\n',i+1,i+1,maxk);
-fprintf(fid,'reaction surface=inner_walls Attached_actin_on_inner_walls Attached_actin -> Actin %g\n',maxk);
+fprintf(fid,'reaction compartment=cmpt_%d Attached_actin_%g Attached_actin -> Actin %g\n',i+1,i+1,mink);
+fprintf(fid,'reaction surface=inner_walls Attached_actin_on_inner_walls Attached_actin -> Actin %g\n',mink);
 
-for i = 1:n_contour-1
-    if i ==1 
-        fprintf(fid,'mol 1 A L/2 L/2\n');
-    else
-        fprintf(fid,'mol 1 A L/2 %g\n',(L/2+radius(i-1)+L/2+radius(i))/2);
-        fprintf(fid,'mol 1 A L/2 %g\n',(L/2-radius(i-1)+L/2-radius(i))/2);
-        fprintf(fid,'mol 1 A %g L/2\n',(L/2+radius(i-1)+L/2+radius(i))/2);
-        fprintf(fid,'mol 1 A %g L/2\n',(L/2-radius(i-1)+L/2-radius(i))/2);
-        fprintf(fid,'mol 1 A %g %g\n',(L/2+radius(i-1)*sqrt(2)/2+L/2+radius(i)*sqrt(2)/2)/2,(L/2+radius(i-1)*sqrt(2)/2+L/2+radius(i)*sqrt(2)/2)/2);
-        fprintf(fid,'mol 1 A %g %g\n',(L/2+radius(i-1)*sqrt(2)/2+L/2+radius(i)*sqrt(2)/2)/2,(L/2-radius(i-1)*sqrt(2)/2+L/2-radius(i)*sqrt(2)/2)/2);
-        fprintf(fid,'mol 1 A %g %g\n',(L/2-radius(i-1)*sqrt(2)/2+L/2-radius(i)*sqrt(2)/2)/2,(L/2+radius(i-1)*sqrt(2)/2+L/2+radius(i)*sqrt(2)/2)/2);
-        fprintf(fid,'mol 1 A %g %g\n',(L/2-radius(i-1)*sqrt(2)/2+L/2-radius(i)*sqrt(2)/2)/2,(L/2-radius(i-1)*sqrt(2)/2+L/2-radius(i)*sqrt(2)/2)/2);
-    end
-end
 
 fprintf(fid,'start_compartment full_domain\n');
 fprintf(fid,'surface inner_walls\n');
@@ -196,14 +182,14 @@ fprintf(fid, 'reaction_probability Attached_actin_polymerization P9a\n');
 fprintf(fid, 'reaction_probability Attached_actin_polymerization_complex 1\n');
 fprintf(fid, 'binding_radius Attached_actin_polymerization rho\n');
 fprintf(fid, 'product_placement Attached_actin_polymerization_complex unbindrad rho_eps\n');
-fprintf(fid, 'reaction Yi_cyto2mem Vesicle + Attached_actin -> complex_Fused_vesicle_Attached_actin\n');
-fprintf(fid, 'reaction Yi_cyto2mem_complex complex_Fused_vesicle_Attached_actin -> Fused_vesicle + Attached_actin\n');
-fprintf(fid, 'reaction_probability Yi_cyto2mem P6a\n');
-fprintf(fid, 'reaction_probability Yi_cyto2mem_complex 1\n');
-fprintf(fid, 'binding_radius Yi_cyto2mem rho\n');
-fprintf(fid, 'product_placement Yi_cyto2mem_complex unbindrad rho_eps\n');
-fprintf(fid, 'reaction Yi_mem2cyto Fused_vesicle -> 0\n');
-fprintf(fid, 'reaction_probability Yi_mem2cyto 1\n');
+fprintf(fid, 'reaction vesicle_cyto2mem Vesicle + Attached_actin -> complex_Fused_vesicle_Attached_actin\n');
+fprintf(fid, 'reaction vesicle_cyto2mem_complex complex_Fused_vesicle_Attached_actin -> Fused_vesicle + Attached_actin\n');
+fprintf(fid, 'reaction_probability vesicle_cyto2mem P6a\n');
+fprintf(fid, 'reaction_probability vesicle_cyto2mem_complex 1\n');
+fprintf(fid, 'binding_radius vesicle_cyto2mem rho\n');
+fprintf(fid, 'product_placement vesicle_cyto2mem_complex unbindrad rho_eps\n');
+fprintf(fid, 'reaction vesicle_mem2cyto Fused_vesicle -> 0\n');
+fprintf(fid, 'reaction_probability vesicle_mem2cyto 1\n');
 fprintf(fid, 'cmd I 2000000 80000000 1 longrangeforce Fused_vesicle Cdc42T 0 10^4 1e-05 3 (r^2+0.01)^0.5-r\n');
 fprintf(fid, 'cmd I 2000000 80000000 1 longrangeforce Fused_vesicle BemGEF42 0 10^4 1e-05 3 (r^2+0.01)^0.5-r\n');
 fprintf(fid, 'cmd I 2000000 80000000 1 longrangeforce Fused_vesicle BemGEFm 0 10^4 1e-05 3 (r^2+0.01)^0.5-r\n');
@@ -214,10 +200,7 @@ fprintf(fid, 'time_step 0.0001\n');
 
 fprintf(fid, 'compartment_mol 5 Vesicle full_domain\n');
 fprintf(fid, 'cmd I 1 %d 60000 set compartment_mol 5 Vesicle full_domain\n',tstop/0.0001);
-
-% Initial conditions
 load('../initial_coordinates.mat')
-
 for i = 1:height(Cdc42T)
     fprintf(fid, 'mol 1 Cdc42T %g %g\n',Cdc42T(i,1),Cdc42T(i,2));
 end
@@ -239,9 +222,8 @@ end
 for i = 1:height(Attached_actin)
     fprintf(fid, 'mol 1 Attached_actin %g %g\n',Attached_actin(i,1),Attached_actin(i,2));
 end
-
-
 fprintf(fid, 'output_files %s\n', xyz_name);
+
 fprintf(fid, 'cmd N 100000 molpos Cdc42T %s\n', xyz_name);
 fprintf(fid, 'cmd N 100000 molpos BemGEF42 %s\n', xyz_name);
 fprintf(fid, 'cmd N 100000 molpos Cdc42Dm %s\n', xyz_name);
@@ -250,5 +232,4 @@ fprintf(fid, 'cmd N 100000 molpos BemGEFm %s\n', xyz_name);
 fprintf(fid, 'cmd N 100000 molpos BemGEFc %s\n', xyz_name);
 fprintf(fid, 'cmd N 100000 molpos Attached_actin %s\n', xyz_name);
 fprintf(fid, 'cmd N 100000 molpos Actin %s\n', xyz_name);
-
 end

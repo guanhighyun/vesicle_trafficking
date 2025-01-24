@@ -5,7 +5,7 @@ mkdir(directory);
 % End point of the simulation. Units in seconds.
 tstop=4000;
 % Number of realizations
-random_seeds = 11:30;
+random_seeds = 1;
 % Number of Far1-GEF
 n_FarGEF = 10;
 % Minimum actin dissociation rate
